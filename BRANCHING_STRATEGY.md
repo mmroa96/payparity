@@ -1,10 +1,8 @@
 # PayParity Branching Strategy
 
 ## Team
-- Mimi Roa — Interface Designer
-- Walid Atmar — Integration Lead
-
-(Erica Woods, originally Lead Architect, dropped the course; the team is now two people.)
+- Mimi Roa — Interface Designer + Architect
+- Walid Atmar — Integration Lead + Architect 
 
 ## Model: GitHub Flow (lightweight, adapted from GitFlow)
 
