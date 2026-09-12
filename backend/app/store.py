@@ -9,6 +9,7 @@ Swapping this for real PostgreSQL persistence is the single highest
 priority piece of follow-up work before Beta, and should be a fairly
 small change since callers only interact with this module's functions.
 """
+
 from __future__ import annotations
 
 from typing import Optional

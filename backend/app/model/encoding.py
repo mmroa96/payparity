@@ -6,6 +6,7 @@ slice with a synthetic dataset; before Beta this should move to a proper
 encoder saved next to the trained model so train-time and serve-time
 encodings can never drift apart.
 """
+
 from __future__ import annotations
 
 KNOWN_ROLES = [

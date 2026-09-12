@@ -1,4 +1,5 @@
 """Pydantic models matching Section 2 of the Interface Contracts document."""
+
 from __future__ import annotations
 
 from typing import List, Optional

@@ -34,7 +34,10 @@ def test_submit_benchmark_happy_path():
 def test_submit_benchmark_missing_required_field():
     resp = client.post(
         "/api/v1/benchmark",
-        json={"job_title": "Senior Software Engineer", "location": "Seattle, WA"},
+        json={
+            "job_title": "Senior Software Engineer",
+            "location": "Seattle, WA",
+        },
     )
     assert resp.status_code == 422
 
@@ -115,7 +118,12 @@ def test_bulk_import_accepts_admin():
         "/api/v1/salary-data",
         json={
             "records": [
-                {"job_title": "Software Engineer II", "location": "Austin, TX", "years_experience": 2, "salary": 95000}
+                {
+                    "job_title": "Software Engineer II",
+                    "location": "Austin, TX",
+                    "years_experience": 2,
+                    "salary": 95000,
+                }
             ]
         },
         headers={"Authorization": f"Bearer {token}"},

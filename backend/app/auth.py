@@ -9,6 +9,7 @@ token issuance endpoint yet, since Alpha only needs to prove the
 verification boundary works. Before Beta this needs a real secret
 management story (e.g. AWS Secrets Manager) and a login/issuance flow.
 """
+
 from __future__ import annotations
 
 import os
