@@ -1,4 +1,4 @@
-""" Categorical encoding for the model layer.
+"""Categorical encoding for the model layer.
 
 Fixed, versioned vocabularies for job title, location, and department.
 Unrecognized values map to a dedicated "unknown" bucket rather than
