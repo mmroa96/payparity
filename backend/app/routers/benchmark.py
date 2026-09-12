@@ -6,7 +6,12 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth import require_admin
-from app.model.encoding import encode_department, encode_job_title, encode_location, search_roles
+from app.model.encoding import (
+    encode_department,
+    encode_job_title,
+    encode_location,
+    search_roles,
+)
 from app.model.predictor import SalaryFeatures, SalaryPredictor, get_predictor
 from app.schemas import (
     BenchmarkRequest,
@@ -49,7 +54,11 @@ def submit_benchmark(
         ) from exc
 
     gap_percent = round(
-        (payload.current_salary - prediction.predicted_salary) / prediction.predicted_salary * 100,
+        (
+            (payload.current_salary - prediction.predicted_salary)
+            / prediction.predicted_salary
+            * 100
+        ),
         1,
     )
 
@@ -85,7 +94,11 @@ def list_roles(query: str = "") -> RolesResponse:
     return RolesResponse(roles=search_roles(query))
 
 
-@router.post("/salary-data", response_model=SalaryDataResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/salary-data",
+    response_model=SalaryDataResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 def bulk_import(
     payload: SalaryDataRequest,
     _claims: dict = Depends(require_admin),

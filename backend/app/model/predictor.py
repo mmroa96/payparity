@@ -5,6 +5,7 @@ Integration Lead), so calling it is a direct function call, not a network
 hop. This module wraps scikit-learn behind a stable Protocol so the model
 can be retrained or swapped without changing the API contract.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -50,7 +51,8 @@ class RegressionSalaryPredictor:
         self._fit_on_synthetic_data()
 
     def _fit_on_synthetic_data(self) -> None:
-        # Columns: job_title_encoded, location_encoded, years_experience, department_encoded
+        # Columns: job_title_encoded, location_encoded, years_experience,
+        # department_encoded
         X = np.array(
             [
                 [0, 0, 1, 0],
