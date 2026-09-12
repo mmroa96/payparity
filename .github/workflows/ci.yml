@@ -33,7 +33,7 @@ jobs:
         run: npm run typecheck --if-present
 
       - name: Run tests
-        run: npm test -- --watchAll=false
+        run: npm run test
 
       - name: Build
         run: npm run build
