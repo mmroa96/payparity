@@ -67,7 +67,7 @@ frontend/
 cd backend
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt -r requirements-dev.txt pytest-cov
+pip install -r requirements.txt -r ../requirements-dev.txt pytest-cov
 uvicorn app.main:app --reload
 ```
 
@@ -134,12 +134,12 @@ Example response:
 
 ```json
 {
-  "benchmark_id": "b_4eaf50f7",
-  "predicted_fair_salary": 138852.02,
-  "confidence_interval": [130852.02, 146852.02],
-  "gap_percent": -6.4,
+  "benchmark_id": "b_08db287e",
+  "predicted_fair_salary": 145575.68,
+  "confidence_interval": [137575.68, 153575.68],
+  "gap_percent": -10.7,
   "flagged": true,
-  "generated_at": "2026-09-28T02:51:28Z"
+  "generated_at": "2026-09-28T03:31:48Z"
 }
 ```
 
@@ -158,7 +158,7 @@ Error responses:
 ```bash
 # backend
 cd backend
-pytest --cov=app --cov-report=term    # tests + coverage
+python -m pytest --cov=app --cov-report=term    # tests + coverage
 flake8 . && black --check .           # lint + format
 python scripts/benchmark.py           # latency + model reliability
 
@@ -172,13 +172,13 @@ Latest results:
 | Check | Result |
 |---|---|
 | Backend tests | 16 passed |
-| Backend coverage | 97% (170 / 176 statements) |
+| Backend coverage | 	97% (167 / 173 statements) |
 | Frontend tests | 3 passed |
 | flake8, black, ESLint, tsc | clean |
 | Production bundle | 145 KB (47 KB gzipped) |
-| API latency, 1,000 in-process requests | median ~1.5 ms, p99 ~2.2 ms |
-| Model, training R² | 0.987 |
-| Model, leave-one-out MAE | $5,905 |
+| API latency, 1,000 in-process requests | 	median ~2.2 ms, p99 ~2.7 ms |
+| Model, training R² | 0.984 |
+| Model, leave-one-out MAE | $7,235 |
 
 Latency is measured in-process and excludes network and database time.
 
@@ -196,7 +196,7 @@ review workflow.
 ## Known limitations
 
 - Results are stored in memory and lost on restart. PostgreSQL is planned.
-- The model is trained on 16 synthetic reference rows, not real pay data.
+- The model is trained on 10 synthetic reference rows, not real pay data.
 - The 5% flag threshold and the ±$8,000 confidence interval are fixed
   placeholders, not derived from model error.
 - No login/token issuance endpoint yet; the JWT secret has a dev default.
