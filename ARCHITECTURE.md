@@ -71,13 +71,14 @@ tokens return 401; wrong role returns 403.
 **Encoding (`backend/app/model/encoding.py`)**
 Maps job title, location, and department to integer codes using fixed
 vocabularies (`v2-fixed-vocab`). Unknown values map to a reserved code,
-so the table never grows at runtime. Training and serving both call the
-same functions, so their encodings cannot drift.
+so the table never grows at runtime. The live API encodes through these
+functions; the model's reference rows use hand-entered codes that must
+stay in line with this vocabulary.
 
 **Disparity Detection Engine (`backend/app/model/predictor.py`)**
 A `SalaryPredictor` Protocol with one implementation,
 `RegressionSalaryPredictor`, a scikit-learn `LinearRegression` fitted on
-16 reference rows at startup. It runs in-process as a direct function
+10 hand-coded reference rows at startup. It runs in-process as a direct function
 call and is reused as a singleton. The router computes:
 
 ```
@@ -101,9 +102,9 @@ checks this.
 
 | Decision | Reason | Trade-off |
 |---|---|---|
-| Model in-process, not a separate service | Simple, ~1.5 ms per request, no network hop | Model and API scale together |
+| Model in-process, not a separate service | Simple, ~2 ms per request, no network hop | Model and API scale together |
 | Protocol interface around the model | Retrain or swap models without changing the API | One more layer of indirection |
-| Fixed encoding vocabulary | Bounded memory, no train/serve drift | New roles need a code change |
+| Fixed encoding vocabulary | Bounded memory, stable codes | New roles need a code change |
 | Stateless JWT for admin routes | Easy to scale across instances | No issuance/login flow yet |
 | Versioned `/api/v1` paths | Room for breaking changes later | None significant |
 
