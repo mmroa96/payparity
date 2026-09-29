@@ -1,83 +1,131 @@
-# PayParity — System Architecture (Alpha Release)
+# PayParity — System Architecture
 
-**Owner:** Lead Architect
-**Status:** Alpha — core modules integrated and running end to end on sample data
+**Status:** Final release (course). Describes the system as built.
 
 ## 1. Overview
 
-PayParity is a fair compensation benchmarking tool. For the Alpha release, the goal isn't a polished product — it's proof that the full pipeline works: a user can submit compensation data, the system runs it through the Disparity Detection Engine, and the result comes back and renders in the UI. Every module below is wired together and passing through CI; individual pieces still have rough edges called out in "Known limitations."
+PayParity takes a salary profile (role, location, experience, department,
+current pay), predicts a fair salary from legitimate factors with a
+regression model, and flags large gaps. The frontend, API, and model run
+as one working round trip. Planned pieces that are not built yet are
+listed separately in section 6 so this document matches the code.
 
-## 2. System Diagram
+## 2. System diagram
 
 ```mermaid
 flowchart LR
     subgraph Client
-        A[React + TypeScript SPA]
+        A[React + TypeScript SPA<br/>BenchmarkForm]
+        A1[PayParityClient<br/>camelCase ⇄ snake_case]
     end
 
-    subgraph API["Backend — FastAPI"]
-        B[Auth / Request Layer]
-        C[Compensation Data Service]
-        D[Disparity Detection Engine\n(scikit-learn regression)]
+    subgraph API["Backend — FastAPI (/api/v1)"]
+        B[Pydantic validation]
+        B2[JWT auth<br/>admin routes only]
+        C[Benchmark router]
+        E1[Encoding<br/>fixed vocabulary]
+        D[Disparity Detection Engine<br/>scikit-learn LinearRegression]
+        S[(In-memory store)]
     end
 
-    subgraph Data
-        E[(PostgreSQL)]
+    subgraph CI["GitHub Actions"]
+        G[Lint · type check · test · coverage · build · benchmark]
     end
 
-    subgraph Infra["AWS"]
-        F[App server / container]
-        G[CI/CD Pipeline\nGitHub Actions]
-    end
-
-    A -- REST/JSON --> B
+    A --> A1
+    A1 -- REST/JSON --> B
     B --> C
-    C --> E
-    C --> D
-    D --> C
-    C -- results --> B
-    B -- JSON response --> A
-    G -- deploys --> F
-    F -.hosts.-> API
+    B2 --> C
+    C --> E1 --> D
+    D -- prediction --> C
+    C --> S
+    C -- JSON result --> A1
 ```
 
-## 3. Component Breakdown
+## 3. Components
 
-**Frontend (React + TypeScript)**
-Single-page app with a basic dashboard: a form to submit or select a dataset, and a results table showing flagged pay disparities. No advanced filtering, sorting, or visualization yet — that's polish for Beta.
+**Frontend (`frontend/`)**
+React 18 + TypeScript, built with Vite and tested with Vitest.
+`BenchmarkForm` collects input and shows the result. `PayParityClient`
+is the only code that talks to the API and translates field names at the
+boundary. The API base URL comes from `VITE_API_BASE_URL`.
 
-**Backend (Python/FastAPI)**
-Exposes the API the frontend calls. For Alpha this covers:
-- `POST /api/compensation` — ingest/store compensation records
-- `POST /api/disparity-analysis` — run the detection engine against a dataset and return flagged results
-- Basic request validation and error handling on both endpoints
+**API layer (`backend/app/routers/benchmark.py`)**
+FastAPI router under `/api/v1`:
 
-**Database (PostgreSQL)**
-Stores compensation records (role, experience, location, tenure, pay) and analysis results. Schema is functional but minimal — no migrations tooling yet, just a baseline schema applied manually.
+| Endpoint | Purpose |
+|---|---|
+| `POST /benchmark` | Encode input, predict, compute gap, flag, save, return |
+| `GET /benchmark/{id}` | Return a saved result |
+| `GET /roles` | Search known job titles |
+| `POST /salary-data` | Admin-only bulk import (accepts records; not yet used for training) |
 
-**Disparity Detection Engine (scikit-learn)**
-A regression model that predicts expected compensation from legitimate factors (role, experience, location, tenure) and flags individuals whose actual pay deviates significantly from the prediction. In Alpha it runs on a static/sample dataset, not live production data, and uses a fixed significance threshold rather than a tunable one.
+Request and response shapes live in `schemas.py` (Pydantic). Invalid
+input returns 422 before reaching the handler.
 
-**Deployment (AWS)**
-The app runs on a single environment (no separate staging/prod split yet). The CI/CD pipeline (established in Unit 4) runs tests and deploys on merge to main.
+**Auth (`backend/app/auth.py`)**
+Stateless JWT (HS256) verification as a FastAPI dependency. Only the bulk
+import route requires it, with an `admin` role claim. Missing or bad
+tokens return 401; wrong role returns 403.
 
-## 4. Multi-Module Integration — What "Alpha" Demonstrates
+**Encoding (`backend/app/model/encoding.py`)**
+Maps job title, location, and department to integer codes using fixed
+vocabularies (`v2-fixed-vocab`). Unknown values map to a reserved code,
+so the table never grows at runtime. The live API encodes through these
+functions; the model's reference rows use hand-entered codes that must
+stay in line with this vocabulary.
 
-- Frontend → Backend → Database → ML engine → back to Frontend is a complete, working round trip on sample data.
-- The Disparity Detection Engine is called synchronously from the API layer, not just runnable as a standalone script — this is the integration point that proves the AI feature is a real part of the product, not a demo off to the side.
-- CI/CD runs on every push: linting, unit tests for the API and the regression module, and a build step.
+**Disparity Detection Engine (`backend/app/model/predictor.py`)**
+A `SalaryPredictor` Protocol with one implementation,
+`RegressionSalaryPredictor`, a scikit-learn `LinearRegression` fitted on
+10 hand-coded reference rows at startup. It runs in-process as a direct function
+call and is reused as a singleton. The router computes:
 
-## 5. Known Limitations (Alpha, not yet resolved)
+```
+gap_percent = (current_salary - predicted) / predicted * 100
+flagged     = |gap_percent| > 5.0
+```
 
-- Single environment / no environment-specific config yet
-- Detection threshold is hardcoded rather than configurable per analysis
-- No database migration tooling — schema changes are applied manually
-- Frontend results view is functional but not designed for large datasets
+If prediction raises, the API returns 503 with `retryable: true`.
 
-*(These are being tracked and will be addressed as part of the team's ongoing peer review and refinement process.)*
+**Storage (`backend/app/store.py`)**
+An in-process dictionary keyed by benchmark id. Callers only use
+`save_benchmark` and `get_benchmark`, so swapping in a database is
+contained to this module.
 
-## 6. Version Control Practices
+**Privacy**
+`gender` is accepted on requests but only read inside the handler. It is
+never saved to the store or logged. `test_gender_is_not_persisted`
+checks this.
 
-- Feature branches per module, merged to `main` via pull request
-- CI must pass before merge
-- Commit messages describe the change and its scope (e.g. `feat(api): add disparity-analysis endpoint`, `fix(engine): correct regression feature scaling`)
+## 4. Key design decisions
+
+| Decision | Reason | Trade-off |
+|---|---|---|
+| Model in-process, not a separate service | Simple, ~2 ms per request, no network hop | Model and API scale together |
+| Protocol interface around the model | Retrain or swap models without changing the API | One more layer of indirection |
+| Fixed encoding vocabulary | Bounded memory, stable codes | New roles need a code change |
+| Stateless JWT for admin routes | Easy to scale across instances | No issuance/login flow yet |
+| Versioned `/api/v1` paths | Room for breaking changes later | None significant |
+
+## 5. CI pipeline
+
+`.github/workflows/ci.yml` runs on pushes and PRs to `main`.
+
+- **Frontend job:** `npm ci`, ESLint, `tsc --noEmit`, Vitest, Vite build
+- **Backend job:** pip install, flake8, black, pytest with coverage
+  (uploaded as an artifact), `scripts/benchmark.py`
+
+Branch protection and review rules are in `BRANCHING_STRATEGY.md`.
+
+## 6. Planned but not built
+
+- **PostgreSQL** to replace the in-memory store
+- **AWS deployment** and a CD stage in the pipeline
+- **Real training data** fed from `POST /salary-data`, with retraining
+- **Statistical threshold and interval** from cross-validated error,
+  replacing the fixed 5% and ±$8,000
+- **Model artifact versioning**, saving the encoder vocabulary with each
+  trained model
+- **Token issuance** and managed secrets
+- **Restricted CORS** for the deployed frontend origin
