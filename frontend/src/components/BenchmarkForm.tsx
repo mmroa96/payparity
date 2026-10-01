@@ -2,9 +2,13 @@ import { useState } from "react";
 import { payParityClient } from "../services/payParityClient";
 import type { BenchmarkResult } from "../types/benchmark";
 
-// Alpha scope: prove the frontend -> backend -> model round trip works.
-// Visual polish, validation messaging, and loading states beyond a basic
-// spinner are intentionally out of scope until Beta.
+const DEPARTMENTS = ["Engineering", "Product"];
+
+// Benchmark form: collects role details, calls the API through
+// PayParityClient, and shows the predicted salary, interval, gap, and flag.
+// Known limitations: minimal styling; job title and location are free text
+// and must match the model's fixed vocabulary.
+
 export default function BenchmarkForm() {
   const [jobTitle, setJobTitle] = useState("Senior Software Engineer");
   const [location, setLocation] = useState("Seattle, WA");
@@ -13,6 +17,7 @@ export default function BenchmarkForm() {
   const [result, setResult] = useState<BenchmarkResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [department, setDepartment] = useState("Engineering");
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -25,6 +30,7 @@ export default function BenchmarkForm() {
         location,
         yearsExperience,
         currentSalary,
+        department,
       });
       setResult(benchmark);
     } catch (err) {
@@ -60,6 +66,14 @@ export default function BenchmarkForm() {
             value={currentSalary}
             onChange={(e) => setCurrentSalary(Number(e.target.value))}
           />
+        </label>
+        <label>
+          Department
+          <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+            {DEPARTMENTS.map((d) => (
+              <option key={d}>{d}</option>
+            ))}
+          </select>
         </label>
         <button type="submit" disabled={isLoading}>
           {isLoading ? "Checking..." : "Check fairness benchmark"}
